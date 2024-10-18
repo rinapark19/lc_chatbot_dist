@@ -59,16 +59,21 @@ def main():
         "신짱구"]
     )
 
+    st.sidebar.divider()
+
     if selected_char != "캐릭터 선택":
         if selected_char == "스파이더맨(피터 파커)":
             data = "data/spiderman.txt"
             char = "pp"
+            st.sidebar.write("질문 예시: 얼티밋 유니버스가 뭐야?, 웹 슈터는 어떻게 만들어?")
         elif selected_char == "전우치":
             data = "data/jwc.txt"
             char = "jwc"
+            st.sidebar.write("질문 예시: 천관대사가 누구야? 초랭이랑은 무슨 사이야?")
         elif selected_char == "신짱구":
             data = "data/szg.txt"
             char = "szg"
+            st.sidebar.write("질문 예시: 짱구의 가족에 대해 알려 줄래? 봉미소가 누구야?")
 
         if "previous_char" not in st.session_state:
             st.session_state.previous_char = selected_char
@@ -78,6 +83,7 @@ def main():
 
         os.environ["OPENAI_API_KEY"] = st.secrets["openai_key"]
         chat_page(data, char)
+
 
 if __name__ == "__main__":
     main()
