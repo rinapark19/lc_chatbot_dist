@@ -24,8 +24,10 @@ import re
 
 from langchain_core.exceptions import OutputParserException
 
+import streamlit as st
+
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI(api_key=st.secrets["openai_key"])
 
 from util import MODEL_LIST, PROMPT_LIST
 
