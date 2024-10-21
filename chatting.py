@@ -24,10 +24,8 @@ import re
 
 from langchain_core.exceptions import OutputParserException
 
-import streamlit as st
-
 load_dotenv()
-client = OpenAI(api_key=st.secrets["openai_key"])
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 from util import MODEL_LIST, PROMPT_LIST
 
@@ -66,9 +64,8 @@ def get_retriever(embedder, vectorstore):
 
     return compression_retriever
 
-
-def get_tool(retriever, model_name="gpt-4-1106-preview"):
-    ''' retriever로 QA chain 및 agent의 tool 정의 '''
+def get_chain(retriever, model_name="gpt-4-0613"):
+    ''' retriever로 QA chain 정의 '''
     prompt = ChatPromptTemplate.from_template("""
     You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
     Question: {question} 
@@ -86,6 +83,11 @@ def get_tool(retriever, model_name="gpt-4-1106-preview"):
         chain_type_kwargs={"prompt": prompt},
         verbose = True
     )
+
+    return qa_chain
+
+def get_tool(qa_chain):
+    ''' retriever로 QA chain 및 agent의 tool 정의 '''
     
     tools = [
         Tool(
@@ -148,7 +150,7 @@ def moderate_content(text):
     response = openai.moderations.create(input=text, model="omni-moderation-latest")
     
     if response.results[0].flagged:
-        return "부적절한 콘텐츠가 감지되었습니다. 문장을 다시 입력해 주세요."
+        return "챗봇의 답변에 부적절한 콘텐츠가 감지되었습니다. 메세지를 다시 입력하세요."
     
     with open("data/badwords.json", "r", encoding="utf-8") as f:
         json_data = f.read()
@@ -156,7 +158,7 @@ def moderate_content(text):
     
     for word in violent_words:
         if re.search(r'\b{}\b'.format(re.escape(word)), text, re.IGNORECASE):
-            return "부적절한 콘텐츠가 감지되었습니다. 문장을 다시 입력해 주세요."
+            return "챗봇의 답변에 부적절한 콘텐츠가 감지되었습니다. 메세지를 다시 입력하세요."
     
     return text
 
@@ -167,7 +169,8 @@ class persona_agent:
         self.embedder = get_cached_embedder()
         self.vectorstore = get_vectorstore(self.chunks, self.embedder)
         self.retriever = get_retriever(self.embedder, self.vectorstore)
-        self.tools = get_tool(self.retriever, MODEL_LIST[char])
+        self.chain = get_chain(self.retriever, MODEL_LIST[char])
+        self.tools = get_tool(self.chain)
         system_message = PROMPT_LIST[char]
         self.agent = get_agent(system_message, self.tools, MODEL_LIST[char])
     
@@ -181,6 +184,25 @@ class persona_agent:
               if not response.startswith("Could not parse LLM output:"):
                 raise e
             response = response.removeprefix("Could not parse LLM output:")
+            response = moderate_content(response)
+            end_time = time.time()
+            
+            response_time = end_time - start_time
+            print(response_time)
+            return response
+        
+class RAG_agent:
+    def __init__(self, pdf_list) -> None:
+        self.chunks = chunking(pdf_list)
+        self.embedder = get_cached_embedder()
+        self.vectorstore = get_vectorstore(self.chunks, self.embedder)
+        self.retriever = get_retriever(self.embedder, self.vectorstore)
+        self.chain = get_chain(self.retriever)
+    
+    def receive_chat(self, chat):
+        while True:
+            start_time = time.time()
+            response = self.chain({"query": chat})["result"]
             response = moderate_content(response)
             end_time = time.time()
             

@@ -2,7 +2,8 @@ CHAT_ICON_LIST = {
     "user": "https://cdn-icons-png.flaticon.com/512/456/456283.png",
     "pp": "https://i.pinimg.com/736x/3f/6d/90/3f6d9011e0f7bd6407c1998a063923f2.jpg",
     "jwc": "https://dimg.donga.com/wps/NEWS/IMAGE/2009/12/31/25139877.2.jpg",
-    "szg": "https://upload.wikimedia.org/wikipedia/ko/4/4a/%EC%8B%A0%EC%A7%B1%EA%B5%AC.png"
+    "szg": "https://upload.wikimedia.org/wikipedia/ko/4/4a/%EC%8B%A0%EC%A7%B1%EA%B5%AC.png",
+    "bot": "https://png.pngtree.com/png-vector/20220611/ourmid/pngtree-chatbot-icon-chat-bot-robot-png-image_4841963.png"
 }
 
 MODEL_LIST = {

@@ -1,4 +1,4 @@
-from chatting import persona_agent
+from chatting import persona_agent, RAG_agent
 import streamlit as st
 import os
 
@@ -16,35 +16,72 @@ def display_chat_message(profile_image, message, role):
 
 def chat_page(data, char):
     ''' 대화 화면 구성 '''
+    
+    # 초기 메세지 세션 설정
+    if "messages_char" not in st.session_state:
+        st.session_state["messages_char"] = [START_LIST[char]]
+    if "messages_rag" not in st.session_state:
+        st.session_state["messages_rag"] = []
 
-    if "messages" not in st.session_state:
-        st.session_state.messages = [START_LIST[char]]
+    col1, col2 = st.columns(2)
 
     # 기존 메세지 출력
-    for msg in st.session_state.messages:
-        display_chat_message(msg["profile_image"], msg["content"], msg["role"])
+    with col1:
+        st.subheader("페르소나 챗봇과의 대화")
+        for msg in st.session_state["messages_char"]:
+            display_chat_message(msg["profile_image"], msg["content"], msg["role"])
+        
+    with col2:
+        st.subheader("RAG 에이전트와의 대화")
+        for msg in st.session_state["messages_rag"]:
+            display_chat_message(msg["profile_image"], msg["content"], msg["role"])
 
     agent = persona_agent(data, char)
+    rag_chain = RAG_agent(data)
     
     # 새 인풋에 대한 출력 생성
     if prompt := st.chat_input("메세지를 입력하세요..."):
-        st.session_state.messages.append({
+        st.session_state["messages_char"].append({
+            "role": "user",
+            "content": prompt, 
+            "profile_image": CHAT_ICON_LIST["user"]
+        })
+
+        st.session_state["messages_rag"].append({
             "role": "user",
             "content": prompt,
             "profile_image": CHAT_ICON_LIST["user"]
         })
 
-        display_chat_message(CHAT_ICON_LIST["user"], prompt, "user")
+        # 사용자 메세지 표시
+        with col1:
+            display_chat_message(CHAT_ICON_LIST["user"], prompt, "user")
+        with col2:
+            display_chat_message(CHAT_ICON_LIST["user"], prompt, "user")
 
         #assistant_response = agent.receive_chat(prompt)
 
+        # 페르소나 챗봇 응답
         assistant_response = agent.receive_chat(prompt)
-        st.session_state.messages.append({
+        st.session_state["messages_char"].append({
             "role": char,
             "content": assistant_response,
             "profile_image": CHAT_ICON_LIST[char]
         })
-        display_chat_message(CHAT_ICON_LIST[char], assistant_response, char)
+        
+        with col1:
+            display_chat_message(CHAT_ICON_LIST[char], assistant_response, char)
+        
+        # RAG agent 응답
+        response2 = rag_chain.receive_chat(prompt)
+        st.session_state["messages_rag"].append({
+            "role": "bot",
+            "content": response2,
+            "profile_image": CHAT_ICON_LIST["bot"]
+        })
+
+        with col2:
+            display_chat_message(CHAT_ICON_LIST["bot"], response2, char)
 
 def main():
     ''' 메인 화면 구성 '''
@@ -58,8 +95,6 @@ def main():
         "전우치",
         "신짱구"]
     )
-
-    st.sidebar.divider()
 
     if selected_char != "캐릭터 선택":
         if selected_char == "스파이더맨(피터 파커)":
@@ -78,12 +113,14 @@ def main():
         if "previous_char" not in st.session_state:
             st.session_state.previous_char = selected_char
         elif st.session_state.previous_char != selected_char:
-            st.session_state.messages = [START_LIST[char]]
+            st.session_state["messages_char"] = [START_LIST[char]]
+            st.session_state["messages_rag"] = []
             st.session_state.previous_char = selected_char
 
         os.environ["OPENAI_API_KEY"] = st.secrets["openai_key"]
         chat_page(data, char)
 
+        
 
 if __name__ == "__main__":
     main()
